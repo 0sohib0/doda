@@ -2,15 +2,11 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لعبة الدودة الذكية - مساحة عملاقة ومود تلقائي</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>لعبة الدودة الذكية V2</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             background: radial-gradient(circle at center, #111b24 0%, #050608 100%);
@@ -27,85 +23,68 @@
 
         .header-panel {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column; /* تحسين العرض للهواتف */
             align-items: center;
-            width: 95vw;
-            max-width: 1400px;
+            width: 100%;
+            max-width: 800px;
             margin-bottom: 10px;
-            gap: 15px;
+            gap: 10px;
         }
 
         .glass-panel {
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
-            padding: 8px 30px;
+            padding: 10px 20px;
             display: flex;
-            gap: 30px;
+            width: 100%;
+            justify-content: space-around;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
         }
 
-        .stat-box {
-            text-align: center;
-        }
+        .stat-box { text-align: center; }
+        .stat-label { font-size: 12px; color: #00ff88; text-transform: uppercase; }
+        .stat-value { font-size: 20px; font-weight: bold; color: #fff; text-shadow: 0 0 8px rgba(0, 255, 136, 0.4); }
 
-        .stat-label {
-            font-size: 12px;
-            color: #00ff88;
-            text-transform: uppercase;
-        }
-
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #fff;
-            text-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
-        }
-
-        /* حاوية الأزرار لتنظيمها */
         .buttons-container {
             display: flex;
-            gap: 15px;
+            gap: 10px;
+            width: 100%;
+            justify-content: center;
+            flex-wrap: wrap; /* السماح بالتفاف الأزرار في الهواتف */
         }
 
         .mode-button {
-            padding: 10px 20px;
+            flex: 1;
+            min-width: 140px;
+            padding: 10px;
             font-family: 'Cairo', sans-serif;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 14px;
             border: 2px solid #00ff88;
             background: transparent;
             color: #00ff88;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
+            text-align: center;
         }
 
         .mode-button.active {
-            background: #00ff88;
-            color: #111;
-            box-shadow: 0 0 15px rgba(0, 255, 136, 0.6);
+            background: #00ff88; color: #111; box-shadow: 0 0 15px rgba(0, 255, 136, 0.6);
         }
 
-        /* تنسيق خاص لزر إضافة التفاح */
-        .apple-button {
-            border-color: #ff3366;
-            color: #ff3366;
-        }
-
-        .apple-button:hover {
-            background: #ff3366;
-            color: #fff;
-            box-shadow: 0 0 15px rgba(255, 51, 102, 0.6);
-        }
+        .apple-button { border-color: #ff3366; color: #ff3366; }
+        .apple-button:hover { background: #ff3366; color: #fff; box-shadow: 0 0 15px rgba(255, 51, 102, 0.6); }
 
         #canvasContainer {
             position: relative;
-            width: 95vw;
-            height: 80vh;
-            max-width: 1400px;
+            width: 100%;
+            flex-grow: 1;
+            max-width: 800px;
+            margin-bottom: 10px;
         }
 
         canvas {
@@ -120,11 +99,10 @@
 
         #gameOverScreen {
             position: absolute;
-            top: 50%;
-            left: 50%;
+            top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             background: rgba(5, 5, 10, 0.95);
-            padding: 35px;
+            padding: 25px;
             border-radius: 15px;
             border: 2px solid #ff3366;
             text-align: center;
@@ -132,30 +110,17 @@
             backdrop-filter: blur(8px);
             box-shadow: 0 0 40px rgba(255, 51, 102, 0.5);
             z-index: 10;
+            width: 80%;
+            max-width: 300px;
         }
 
-        #gameOverScreen h2 {
-            color: #ff3366;
-            font-size: 32px;
-            margin-bottom: 10px;
-        }
-
+        #gameOverScreen h2 { color: #ff3366; font-size: 24px; margin-bottom: 10px; }
         .restart-btn {
-            margin-top: 15px;
-            padding: 8px 20px;
-            font-size: 16px;
-            font-family: 'Cairo', sans-serif;
-            font-weight: bold;
-            color: #111;
-            background: #00ff88;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
-        }
-
-        .restart-btn:hover {
-            background: #00cc6a;
+            margin-top: 15px; padding: 10px 20px; font-size: 16px;
+            font-family: 'Cairo', sans-serif; font-weight: bold;
+            color: #111; background: #00ff88; border: none;
+            border-radius: 6px; cursor: pointer; box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+            width: 100%;
         }
     </style>
 </head>
@@ -168,24 +133,22 @@
                 <div class="stat-value" id="score">0</div>
             </div>
             <div class="stat-box">
-                <div class="stat-label">النمط الحالي</div>
-                <div class="stat-value" id="currentMode" style="color: #00ff88; font-size: 18px; margin-top: 5px;">يدوي 👤</div>
+                <div class="stat-label">النمط</div>
+                <div class="stat-value" id="currentMode" style="color: #00ff88; font-size: 16px; margin-top: 5px;">يدوي 👤</div>
             </div>
         </div>
         
         <div class="buttons-container">
-            <button class="mode-button apple-button" onclick="addAppleBtnClick()">إضافة تفاحة 🍎</button>
-            
-            <button class="mode-button" id="aiBtn" onclick="toggleAIMode()">تفعيل الذكاء الاصطناعي 🤖</button>
+            <button class="mode-button apple-button" onclick="addAppleBtnClick()">تفاحة 🍎</button>
+            <button class="mode-button" id="aiBtn" onclick="toggleAIMode()">الذكاء الاصطناعي 🤖</button>
         </div>
     </div>
 
     <div id="canvasContainer">
         <canvas id="gameCanvas"></canvas>
-        
         <div id="gameOverScreen">
             <h2>انتهت اللعبة!</h2>
-            <p>النتيجة النهائية هي: <span id="finalScore">0</span></p>
+            <p>النتيجة: <span id="finalScore">0</span></p>
             <button class="restart-btn" onclick="resetGame()">إلعب مجدداً</button>
         </div>
     </div>
@@ -199,10 +162,7 @@
         let score = 0;
         let dx = gridSize; 
         let dy = 0;        
-        
-        // تحويل الطعام إلى مصفوفة ليدعم وجود أكثر من تفاحة
         let foods = []; 
-        
         let changingDirection = false;
         let gameLoopTimeout;
         let isAIMode = false;
@@ -215,7 +175,6 @@
 
         function initGame() {
             resizeCanvas();
-            
             const startX = Math.floor((canvas.width / 2) / gridSize) * gridSize;
             const startY = Math.floor((canvas.height / 2) / gridSize) * gridSize;
 
@@ -224,18 +183,11 @@
                 { x: startX - gridSize, y: startY },
                 { x: startX - gridSize * 2, y: startY }
             ];
-            score = 0;
-            dx = gridSize;
-            dy = 0;
-            foods = []; // تصفير قائمة الطعام
+            score = 0; dx = gridSize; dy = 0; foods = [];
             
             document.getElementById('score').innerText = score;
             document.getElementById('gameOverScreen').style.display = 'none';
-            
-            // إضافة أول تفاحة عند بدء اللعبة
-            addRandomFood();
-            
-            main();
+            addRandomFood(); main();
         }
 
         document.addEventListener("keydown", changeDirection);
@@ -246,25 +198,15 @@
             const modeText = document.getElementById("currentMode");
             
             if (isAIMode) {
-                btn.innerText = "تعطيل الذكاء الاصطناعي 👤";
-                btn.classList.add("active");
-                modeText.innerText = "تلقائي 🤖";
-                modeText.style.color = "#ffaa00";
+                btn.innerText = "إيقاف البوت 👤"; btn.classList.add("active");
+                modeText.innerText = "تلقائي 🤖"; modeText.style.color = "#ffaa00";
             } else {
-                btn.innerText = "تفعيل الذكاء الاصطناعي 🤖";
-                btn.classList.remove("active");
-                modeText.innerText = "يدوي 👤";
-                modeText.style.color = "#00ff88";
+                btn.innerText = "تشغيل البوت 🤖"; btn.classList.remove("active");
+                modeText.innerText = "يدوي 👤"; modeText.style.color = "#00ff88";
             }
         }
 
-        // دالة زر إضافة التفاح
-        function addAppleBtnClick() {
-            // إضافة 3 تفاحات في كل ضغطة لزيادة المتعة (يمكنك تعديلها لـ 1 إذا أردت)
-            addRandomFood();
-            addRandomFood();
-            addRandomFood();
-        }
+        function addAppleBtnClick() { addRandomFood(); addRandomFood(); }
 
         function main() {
             if (hasGameEnded()) {
@@ -272,89 +214,93 @@
                 document.getElementById('gameOverScreen').style.display = 'block';
                 return;
             }
-
             changingDirection = false;
-            
-            if (isAIMode) {
-                runAI();
-            }
+            if (isAIMode) runAI();
 
             gameLoopTimeout = setTimeout(function onTick() {
-                clearCanvas();
-                drawFoods();
-                advanceSnake();
-                drawSnake();
-                main();
+                clearCanvas(); drawFoods(); advanceSnake(); drawSnake(); main();
             }, 70);
         }
 
-        function clearCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+        // دالة مساعدة للذكاء الاصطناعي لفحص ما إذا كان المربع آمناً
+        function isSafe(x, y) {
+            if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) return false;
+            for (let i = 0; i < snake.length - 1; i++) { // نستثني الذيل لأنه سيتحرك
+                if (snake[i].x === x && snake[i].y === y) return false;
+            }
+            return true;
         }
 
+        // دالة تحسب عدد المسارات الحرة المتاحة (الرؤية المستقبلية)
+        function countFreeSpaces(x, y) {
+            let free = 0;
+            if (isSafe(x + gridSize, y)) free++;
+            if (isSafe(x - gridSize, y)) free++;
+            if (isSafe(x, y + gridSize)) free++;
+            if (isSafe(x, y - gridSize)) free++;
+            return free;
+        }
+
+        // خوارزمية الذكاء الاصطناعي المطورة (V2)
         function runAI() {
             const head = snake[0];
-            
-            // إذا لم يكن هناك طعام، الدودة ستكمل طريقها فقط
             if (foods.length === 0) return;
 
-            // 1. العثور على أقرب تفاحة
             let targetFood = foods[0];
             let minDistanceToFood = Infinity;
 
             for (let i = 0; i < foods.length; i++) {
                 const dist = Math.abs(head.x - foods[i].x) + Math.abs(head.y - foods[i].y);
                 if (dist < minDistanceToFood) {
-                    minDistanceToFood = dist;
-                    targetFood = foods[i];
+                    minDistanceToFood = dist; targetFood = foods[i];
                 }
             }
 
             const directions = [
-                { x: gridSize, y: 0 },
-                { x: -gridSize, y: 0 },
-                { x: 0, y: gridSize },
-                { x: 0, y: -gridSize }
+                { x: gridSize, y: 0 }, { x: -gridSize, y: 0 },
+                { x: 0, y: gridSize }, { x: 0, y: -gridSize }
             ];
 
             let bestDir = null;
-            let minDistance = Infinity;
+            let bestScore = -Infinity; // نظام تنقيط لاختيار أفضل حركة
 
             for (const dir of directions) {
-                if (dir.x === -dx && dir.y === -dy) continue;
+                if (dir.x === -dx && dir.y === -dy) continue; // لا تعود للخلف
 
                 const nextX = head.x + dir.x;
                 const nextY = head.y + dir.y;
 
-                if (nextX < 0 || nextX >= canvas.width || nextY < 0 || nextY >= canvas.height) continue;
-                
-                let collisionWithBody = false;
-                for (let i = 0; i < snake.length; i++) {
-                    if (snake[i].x === nextX && snake[i].y === nextY) {
-                        collisionWithBody = true;
-                        break;
-                    }
-                }
-                if (collisionWithBody) continue;
+                if (!isSafe(nextX, nextY)) continue;
 
-                // حساب المسافة إلى أقرب تفاحة (targetFood)
                 const distance = Math.abs(nextX - targetFood.x) + Math.abs(nextY - targetFood.y);
+                const freeSpaces = countFreeSpaces(nextX, nextY); // التفكير للمستقبل
 
-                if (distance < minDistance) {
-                    minDistance = distance;
+                // التنقيط: نفضل المسافة الأقصر، ولكننا نعطي أولوية قصوى للمساحات المفتوحة لتجنب الحصار
+                let moveScore = -distance; // المسافة الأقل أفضل
+                
+                if (freeSpaces === 0) {
+                    moveScore -= 10000; // مسار مسدود! تجنبه بأي ثمن
+                } else if (freeSpaces === 1) {
+                    moveScore -= 1000;  // مسار خطير (قد يكون نفقاً)
+                } else {
+                    moveScore += freeSpaces * 10; // مكافأة للمسارات المفتوحة
+                }
+
+                if (moveScore > bestScore) {
+                    bestScore = moveScore;
                     bestDir = dir;
                 }
             }
 
+            // إذا وجد مساراً أفضل، قم بتغيير الاتجاه
             if (bestDir) {
-                dx = bestDir.x;
-                dy = bestDir.y;
+                dx = bestDir.x; dy = bestDir.y;
             }
         }
 
-        function drawSnake() {
-            snake.forEach(drawSnakePart);
-        }
+        function drawSnake() { snake.forEach(drawSnakePart); }
 
         function drawSnakePart(snakePart, index) {
             const isHead = index === 0;
@@ -362,41 +308,25 @@
             const centerY = snakePart.y + gridSize / 2;
             const radius = gridSize / 2 - 1;
 
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-            
+            ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
             if (isHead) {
-                ctx.fillStyle = "#00ff88"; 
-                ctx.shadowColor = "#00ff88";
-                ctx.shadowBlur = 8;
+                ctx.fillStyle = "#00ff88"; ctx.shadowColor = "#00ff88"; ctx.shadowBlur = 8;
             } else {
-                ctx.fillStyle = "#00cc6a";
-                ctx.shadowBlur = 0;
+                ctx.fillStyle = "#00cc6a"; ctx.shadowBlur = 0;
             }
-            
-            ctx.fill();
-            ctx.closePath();
+            ctx.fill(); ctx.closePath();
 
-            if (isHead) {
-                drawEyes(centerX, centerY);
-            }
+            if (isHead) drawEyes(centerX, centerY);
         }
 
         function drawEyes(x, y) {
             ctx.fillStyle = "white";
             let eye1X, eye1Y, eye2X, eye2Y;
-            const eyeOffset = 4;
-
-            if (dx > 0) { 
-                eye1X = x + eyeOffset; eye1Y = y - eyeOffset; eye2X = x + eyeOffset; eye2Y = y + eyeOffset;
-            } else if (dx < 0) { 
-                eye1X = x - eyeOffset; eye1Y = y - eyeOffset; eye2X = x - eyeOffset; eye2Y = y + eyeOffset;
-            } else if (dy > 0) { 
-                eye1X = x - eyeOffset; eye1Y = y + eyeOffset; eye2X = x + eyeOffset; eye2Y = y + eyeOffset;
-            } else { 
-                eye1X = x - eyeOffset; eye1Y = y - eyeOffset; eye2X = x + eyeOffset; eye2Y = y - eyeOffset;
-            }
-
+            const offset = 4;
+            if (dx > 0) { eye1X = x + offset; eye1Y = y - offset; eye2X = x + offset; eye2Y = y + offset; } 
+            else if (dx < 0) { eye1X = x - offset; eye1Y = y - offset; eye2X = x - offset; eye2Y = y + offset; } 
+            else if (dy > 0) { eye1X = x - offset; eye1Y = y + offset; eye2X = x + offset; eye2Y = y + offset; } 
+            else { eye1X = x - offset; eye1Y = y - offset; eye2X = x + offset; eye2Y = y - offset; }
             ctx.beginPath(); ctx.arc(eye1X, eye1Y, 3, 0, 2 * Math.PI); ctx.fill();
             ctx.beginPath(); ctx.arc(eye2X, eye2Y, 3, 0, 2 * Math.PI); ctx.fill();
         }
@@ -405,116 +335,49 @@
             const head = { x: snake[0].x + dx, y: snake[0].y + dy };
             snake.unshift(head); 
 
-            // التحقق مما إذا كان رأس الدودة قد اصطدم بأي تفاحة في المصفوفة
-            let eatenFoodIndex = -1;
-            for (let i = 0; i < foods.length; i++) {
-                if (snake[0].x === foods[i].x && snake[0].y === foods[i].y) {
-                    eatenFoodIndex = i;
-                    break;
-                }
-            }
-
-            if (eatenFoodIndex !== -1) {
-                // زيادة النتيجة
-                score += 10;
-                document.getElementById('score').innerText = score;
-                
-                // إزالة التفاحة التي تم أكلها من المصفوفة
-                foods.splice(eatenFoodIndex, 1);
-                
-                // إضافة تفاحة جديدة كبديل للمحافظة على استمرارية اللعبة
-                addRandomFood();
+            let eatenIndex = foods.findIndex(f => snake[0].x === f.x && snake[0].y === f.y);
+            if (eatenIndex !== -1) {
+                score += 10; document.getElementById('score').innerText = score;
+                foods.splice(eatenIndex, 1); addRandomFood();
             } else {
-                snake.pop(); // حذف الذيل إذا لم يتم الأكل
+                snake.pop(); 
             }
         }
 
-        // رسم كل التفاحات الموجودة في المصفوفة
         function drawFoods() {
             foods.forEach(food => {
-                const centerX = food.x + gridSize / 2;
-                const centerY = food.y + gridSize / 2;
-                const radius = gridSize / 2 - 2;
-
-                ctx.shadowColor = "#ff3366";
-                ctx.shadowBlur = 12;
-
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-                ctx.fillStyle = "#ff3366";
-                ctx.fill();
-                ctx.closePath();
-
-                ctx.shadowBlur = 0; // إيقاف التوهج لبقية الأشكال
+                const cx = food.x + gridSize / 2, cy = food.y + gridSize / 2, r = gridSize / 2 - 2;
+                ctx.shadowColor = "#ff3366"; ctx.shadowBlur = 12;
+                ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+                ctx.fillStyle = "#ff3366"; ctx.fill(); ctx.closePath();
+                ctx.shadowBlur = 0; 
             });
         }
 
-        // دالة توليد تفاحة عشوائية جديدة وإضافتها للمصفوفة
         function addRandomFood() {
             const maxX = (canvas.width - gridSize) / gridSize;
             const maxY = (canvas.height - gridSize) / gridSize;
-            
-            let newFoodX, newFoodY;
-            let isValidPosition = false;
-            let attempts = 0;
+            let nx, ny, valid = false, attempts = 0;
 
-            // محاولة إيجاد مكان فارغ لا يتقاطع مع الدودة أو التفاح الآخر
-            while (!isValidPosition && attempts < 100) {
-                newFoodX = Math.floor(Math.random() * maxX) * gridSize;
-                newFoodY = Math.floor(Math.random() * maxY) * gridSize;
-                isValidPosition = true;
-
-                // التحقق من التقاطع مع الدودة
-                for (let part of snake) {
-                    if (part.x === newFoodX && part.y === newFoodY) {
-                        isValidPosition = false; break;
-                    }
-                }
-
-                // التحقق من التقاطع مع تفاح موجود بالفعل
-                if (isValidPosition) {
-                    for (let food of foods) {
-                        if (food.x === newFoodX && food.y === newFoodY) {
-                            isValidPosition = false; break;
-                        }
-                    }
-                }
+            while (!valid && attempts < 100) {
+                nx = Math.floor(Math.random() * maxX) * gridSize;
+                ny = Math.floor(Math.random() * maxY) * gridSize;
+                valid = !snake.some(p => p.x === nx && p.y === ny) && !foods.some(f => f.x === nx && f.y === ny);
                 attempts++;
             }
-
-            if (isValidPosition) {
-                foods.push({ x: newFoodX, y: newFoodY });
-            }
+            if (valid) foods.push({ x: nx, y: ny });
         }
 
         function changeDirection(event) {
             if (isAIMode) return;
-
-            const LEFT_KEY = 37;
-            const RIGHT_KEY = 39;
-            const UP_KEY = 38;
-            const DOWN_KEY = 40;
-
+            const key = event.keyCode;
+            const goingUp = dy === -gridSize, goingDown = dy === gridSize, goingRight = dx === gridSize, goingLeft = dx === -gridSize;
             if (changingDirection) return;
 
-            const keyPressed = event.keyCode;
-            const goingUp = dy === -gridSize;
-            const goingDown = dy === gridSize;
-            const goingRight = dx === gridSize;
-            const goingLeft = dx === -gridSize;
-
-            if (keyPressed === LEFT_KEY && !goingRight) {
-                dx = -gridSize; dy = 0; changingDirection = true;
-            }
-            if (keyPressed === UP_KEY && !goingDown) {
-                dx = 0; dy = -gridSize; changingDirection = true;
-            }
-            if (keyPressed === RIGHT_KEY && !goingLeft) {
-                dx = gridSize; dy = 0; changingDirection = true;
-            }
-            if (keyPressed === DOWN_KEY && !goingUp) {
-                dx = 0; dy = gridSize; changingDirection = true;
-            }
+            if (key === 37 && !goingRight) { dx = -gridSize; dy = 0; changingDirection = true; }
+            if (key === 38 && !goingDown) { dx = 0; dy = -gridSize; changingDirection = true; }
+            if (key === 39 && !goingLeft) { dx = gridSize; dy = 0; changingDirection = true; }
+            if (key === 40 && !goingUp) { dx = 0; dy = gridSize; changingDirection = true; }
         }
 
         function hasGameEnded() {
@@ -524,16 +387,9 @@
             return snake[0].x < 0 || snake[0].x >= canvas.width || snake[0].y < 0 || snake[0].y >= canvas.height;
         }
 
-        function resetGame() {
-            clearTimeout(gameLoopTimeout);
-            initGame();
-        }
-
-        window.addEventListener('resize', () => {
-            clearTimeout(gameLoopTimeout);
-            initGame();
-        });
-
+        function resetGame() { clearTimeout(gameLoopTimeout); initGame(); }
+        
+        window.addEventListener('resize', () => { clearTimeout(gameLoopTimeout); initGame(); });
         initGame();
     </script>
 </body>
