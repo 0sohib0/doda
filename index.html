@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>لعبة الدودة الذكية V3 - النسخة الهاملتونية</title>
+    <title>لعبة الدودة الذكية V4 - الاحترافية</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -19,6 +19,9 @@
             font-family: 'Cairo', sans-serif;
             overflow: hidden;
             padding: 10px;
+            /* منع التحديد والتمرير العشوائي في الهاتف */
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         .header-panel {
@@ -41,12 +44,20 @@
             display: flex;
             width: 100%;
             justify-content: space-around;
+            align-items: center;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s;
         }
 
         .stat-box { text-align: center; }
         .stat-label { font-size: 12px; color: #00ff88; text-transform: uppercase; }
-        .stat-value { font-size: 20px; font-weight: bold; color: #fff; text-shadow: 0 0 8px rgba(0, 255, 136, 0.4); }
+        .stat-value { 
+            font-size: 22px; 
+            font-weight: bold; 
+            color: #fff; 
+            text-shadow: 0 0 8px rgba(0, 255, 136, 0.4); 
+            display: inline-block;
+        }
         .high-score-color { color: #ffaa00; text-shadow: 0 0 8px rgba(255, 170, 0, 0.4); }
 
         .buttons-container {
@@ -54,31 +65,31 @@
             gap: 10px;
             width: 100%;
             justify-content: center;
-            flex-wrap: wrap;
         }
 
         .mode-button {
             flex: 1;
-            min-width: 140px;
             padding: 10px;
             font-family: 'Cairo', sans-serif;
             font-weight: bold;
             font-size: 14px;
             border: 2px solid #00ff88;
-            background: transparent;
+            background: rgba(0, 255, 136, 0.1);
             color: #00ff88;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
             text-align: center;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .mode-button.active {
             background: #00ff88; color: #111; box-shadow: 0 0 15px rgba(0, 255, 136, 0.6);
         }
 
-        .apple-button { border-color: #ff3366; color: #ff3366; }
-        .apple-button:hover { background: #ff3366; color: #fff; box-shadow: 0 0 15px rgba(255, 51, 102, 0.6); }
+        .apple-button { border-color: #ff3366; color: #ff3366; background: rgba(255, 51, 102, 0.1); }
+        .apple-button:active { transform: scale(0.95); }
 
         #canvasContainer {
             position: relative;
@@ -96,8 +107,10 @@
             width: 100%;
             height: 100%;
             display: block;
+            touch-action: none; /* مهم جداً لمنع تمرير الشاشة عند السحب */
         }
 
+        /* شاشة النهاية */
         #gameOverScreen {
             position: absolute;
             top: 50%; left: 50%;
@@ -114,7 +127,6 @@
             width: 80%;
             max-width: 300px;
         }
-
         #gameOverScreen h2 { color: #ff3366; font-size: 24px; margin-bottom: 10px; }
         .restart-btn {
             margin-top: 15px; padding: 10px 20px; font-size: 16px;
@@ -122,6 +134,23 @@
             color: #111; background: #00ff88; border: none;
             border-radius: 6px; cursor: pointer; box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
             width: 100%;
+        }
+
+        /* أنيميشن عند تسجيل نقطة */
+        @keyframes scorePulse {
+            0% { transform: scale(1); color: #fff; }
+            50% { transform: scale(1.6); color: #ff3366; text-shadow: 0 0 20px #ff3366; }
+            100% { transform: scale(1); color: #fff; }
+        }
+        .animate-score { animation: scorePulse 0.4s ease-out; }
+
+        /* استعلامات الميديا للهواتف */
+        @media (max-width: 480px) {
+            .glass-panel { padding: 8px 10px; }
+            .stat-label { font-size: 10px; }
+            .stat-value { font-size: 18px; }
+            .mode-button { font-size: 12px; padding: 8px; }
+            #currentMode { font-size: 12px !important; }
         }
     </style>
 </head>
@@ -144,8 +173,8 @@
         </div>
         
         <div class="buttons-container">
-            <button class="mode-button apple-button" onclick="addAppleBtnClick()">تفاحة 🍎</button>
-            <button class="mode-button" id="aiBtn" onclick="toggleAIMode()">الذكاء الاصطناعي 🤖</button>
+            <button class="mode-button apple-button" onclick="addAppleBtnClick()">إضافة تفاحة 🍎</button>
+            <button class="mode-button" id="aiBtn" onclick="toggleAIMode()">تشغيل البوت 🤖</button>
         </div>
     </div>
 
@@ -162,48 +191,61 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
+        // إعدادات الصوت باستخدام Web Audio API المدمج
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+
+        function playEatSound() {
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(800, audioCtx.currentTime); // تردد عالي للصوت
+            oscillator.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+            
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.1);
+        }
+
         const gridSize = 20; 
         let snake = [];
         let score = 0;
-        let highScore = localStorage.getItem("snakeHighScore") || 0;
-        let dx = 0; 
-        let dy = gridSize;        
+        let highScore = localStorage.getItem("snakeHighScoreV4") || 0;
+        let dx = 0; let dy = gridSize;        
         let foods = []; 
+        let particles = []; // مصفوفة المؤثرات البصرية عند الأكل
         let changingDirection = false;
         let gameLoopTimeout;
         let isAIMode = false;
-        let gameSpeed = 45; // تم تقليل الزمن لزيادة السرعة
+        let gameSpeed = 50; 
 
-        // متغيرات للتحكم باللمس (الموبايل)
-        let touchStartX = 0;
-        let touchStartY = 0;
-
+        let touchStartX = 0; let touchStartY = 0;
         document.getElementById('highScore').innerText = highScore;
 
         function resizeCanvas() {
             const container = document.getElementById("canvasContainer");
-            // نجبر العرض على أن يكون مضاعفاً زوجياً للـ gridSize لضمان عمل الدورة الهاملتونية بشكل مثالي
             canvas.width = Math.floor(container.clientWidth / (gridSize * 2)) * (gridSize * 2);
             canvas.height = Math.floor(container.clientHeight / gridSize) * gridSize;
         }
 
         function initGame() {
             resizeCanvas();
-            
-            // نقطة البداية مهيأة لتناسب الدورة الهاملتونية (يبدأ من العمود الأول وينزل لأسفل)
-            const startX = 0;
-            const startY = gridSize * 3;
-
+            const startX = 0; const startY = gridSize * 3;
             snake = [
                 { x: startX, y: startY },
                 { x: startX, y: startY - gridSize },
                 { x: startX, y: startY - gridSize * 2 }
             ];
-            
-            score = 0; 
-            dx = 0; // يبدأ بالنزول لأسفل
-            dy = gridSize; 
-            foods = [];
+            score = 0; dx = 0; dy = gridSize; foods = []; particles = [];
             
             document.getElementById('score').innerText = score;
             document.getElementById('gameOverScreen').style.display = 'none';
@@ -211,30 +253,31 @@
             main();
         }
 
-        // التحكم بالكيبورد
         document.addEventListener("keydown", changeDirection);
 
-        // التحكم باللمس للهواتف
-        document.addEventListener('touchstart', e => {
+        // التحكم باللمس
+        canvas.addEventListener('touchstart', e => {
             touchStartX = e.changedTouches[0].screenX;
             touchStartY = e.changedTouches[0].screenY;
-        }, {passive: true});
+            // تفعيل الصوت في متصفحات الجوال التي تتطلب تفاعل المستخدم أولاً
+            if (!audioCtx) audioCtx = new AudioContext();
+        }, {passive: false});
 
-        document.addEventListener('touchend', e => {
+        canvas.addEventListener('touchend', e => {
+            e.preventDefault(); // منع التحديد العشوائي
             if (isAIMode || changingDirection) return;
             let touchEndX = e.changedTouches[0].screenX;
             let touchEndY = e.changedTouches[0].screenY;
             handleSwipe(touchEndX - touchStartX, touchEndY - touchStartY);
-        }, {passive: true});
+        }, {passive: false});
 
         function handleSwipe(deltaX, deltaY) {
             const goingUp = dy === -gridSize, goingDown = dy === gridSize;
             const goingRight = dx === gridSize, goingLeft = dx === -gridSize;
-
-            if (Math.abs(deltaX) > Math.abs(deltaY)) { // سحب أفقي
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
                 if (deltaX > 30 && !goingLeft) { dx = gridSize; dy = 0; changingDirection = true; }
                 else if (deltaX < -30 && !goingRight) { dx = -gridSize; dy = 0; changingDirection = true; }
-            } else { // سحب عمودي
+            } else {
                 if (deltaY > 30 && !goingUp) { dx = 0; dy = gridSize; changingDirection = true; }
                 else if (deltaY < -30 && !goingDown) { dx = 0; dy = -gridSize; changingDirection = true; }
             }
@@ -244,10 +287,9 @@
             isAIMode = !isAIMode;
             const btn = document.getElementById("aiBtn");
             const modeText = document.getElementById("currentMode");
-            
             if (isAIMode) {
                 btn.innerText = "إيقاف البوت 👤"; btn.classList.add("active");
-                modeText.innerText = "تلقائي (هاملتوني) 🤖"; modeText.style.color = "#ffaa00";
+                modeText.innerText = "تلقائي 🤖"; modeText.style.color = "#ffaa00";
             } else {
                 btn.innerText = "تشغيل البوت 🤖"; btn.classList.remove("active");
                 modeText.innerText = "يدوي 👤"; modeText.style.color = "#00ff88";
@@ -255,14 +297,56 @@
         }
 
         function addAppleBtnClick() { 
-            addRandomFood(); // إضافة تفاحة واحدة فقط بناءً على طلبك
+            addRandomFood(); 
+            // تشغيل تهيئة الصوت للكمبيوتر
+            if (!audioCtx) audioCtx = new AudioContext();
+        }
+
+        function triggerScoreAnimation() {
+            const scoreEl = document.getElementById('score');
+            scoreEl.classList.remove('animate-score');
+            void scoreEl.offsetWidth; // إعادة ضبط الأنيميشن
+            scoreEl.classList.add('animate-score');
+        }
+
+        function createParticles(x, y) {
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x: x + gridSize / 2,
+                    y: y + gridSize / 2,
+                    vx: (Math.random() - 0.5) * 12,
+                    vy: (Math.random() - 0.5) * 12,
+                    life: 1.0,
+                    color: Math.random() > 0.5 ? '#ff3366' : '#fff'
+                });
+            }
+        }
+
+        function updateAndDrawParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.08; // سرعة اختفاء الجزيئات
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                } else {
+                    ctx.globalAlpha = p.life;
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                }
+            }
         }
 
         function main() {
             if (hasGameEnded()) {
                 if (score > highScore) {
                     highScore = score;
-                    localStorage.setItem("snakeHighScore", highScore);
+                    localStorage.setItem("snakeHighScoreV4", highScore);
                     document.getElementById('highScore').innerText = highScore;
                 }
                 document.getElementById('finalScore').innerText = score;
@@ -271,16 +355,20 @@
             }
             
             changingDirection = false;
-            if (isAIMode) runAIHamiltonian(); // تشغيل الخوارزمية الجديدة
+            if (isAIMode) runAIHamiltonian();
 
             gameLoopTimeout = setTimeout(function onTick() {
-                clearCanvas(); drawFoods(); advanceSnake(); drawSnake(); main();
+                clearCanvas(); 
+                drawFoods(); 
+                advanceSnake(); 
+                drawSnake(); 
+                updateAndDrawParticles(); // رسم المؤثرات
+                main();
             }, gameSpeed);
         }
 
         function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
-        // خوارزمية الدورة الهاملتونية (المسح الذكي)
         function runAIHamiltonian() {
             const head = snake[0];
             let col = Math.round(head.x / gridSize);
@@ -288,22 +376,18 @@
             let maxCol = Math.round(canvas.width / gridSize) - 1;
             let maxRow = Math.round(canvas.height / gridSize) - 1;
 
-            // الصف العلوي (y=0) مخصص للعودة من اليمين إلى اليسار (نقطة البداية)
             if (row === 0) {
-                if (col > 0) { dx = -gridSize; dy = 0; } // اتجه يساراً
-                else { dx = 0; dy = gridSize; } // عند الوصول لأقصى اليسار، انزل لأسفل
+                if (col > 0) { dx = -gridSize; dy = 0; } 
+                else { dx = 0; dy = gridSize; } 
             } 
-            // الأعمدة الزوجية (0, 2, 4...) تنزل لأسفل
             else if (col % 2 === 0) {
-                if (row < maxRow) { dx = 0; dy = gridSize; } // استمر بالنزول
-                else { dx = gridSize; dy = 0; } // عند القاع، تحرك يميناً للعمود الفردي
+                if (row < maxRow) { dx = 0; dy = gridSize; } 
+                else { dx = gridSize; dy = 0; } 
             } 
-            // الأعمدة الفردية (1, 3, 5...) تصعد لأعلى
             else {
-                // إذا كنا في العمود الأخير ووصلنا للصف قبل العلوي، نصعد للصف العلوي لنكمل الدورة
                 if (col === maxCol && row === 1) { dx = 0; dy = -gridSize; }
-                else if (row > 1) { dx = 0; dy = -gridSize; } // استمر بالصعود حتى الصف 1
-                else { dx = gridSize; dy = 0; } // عند الصف 1، تحرك يميناً للعمود الزوجي التالي
+                else if (row > 1) { dx = 0; dy = -gridSize; } 
+                else { dx = gridSize; dy = 0; } 
             }
         }
 
@@ -344,6 +428,11 @@
 
             let eatenIndex = foods.findIndex(f => head.x === f.x && head.y === f.y);
             if (eatenIndex !== -1) {
+                // مؤثرات عند الأكل
+                playEatSound();
+                createParticles(foods[eatenIndex].x, foods[eatenIndex].y);
+                triggerScoreAnimation();
+                
                 score += 10; document.getElementById('score').innerText = score;
                 foods.splice(eatenIndex, 1); addRandomFood();
             } else {
@@ -378,6 +467,9 @@
         function changeDirection(event) {
             if (isAIMode) return;
             const key = event.keyCode;
+            // تفعيل الصوت للمتصفح عند أول ضغطة
+            if (!audioCtx) audioCtx = new AudioContext();
+            
             const goingUp = dy === -gridSize, goingDown = dy === gridSize;
             const goingRight = dx === gridSize, goingLeft = dx === -gridSize;
             if (changingDirection) return;
@@ -389,11 +481,9 @@
         }
 
         function hasGameEnded() {
-            // الخسارة فقط إذا اصطدمت الدودة بنفسها (في الوضع اليدوي عادة)
             for (let i = 4; i < snake.length; i++) {
                 if (snake[i].x === snake[0].x && snake[i].y === snake[0].y) return true;
             }
-            // أو إذا خرجت عن الحدود
             return snake[0].x < 0 || snake[0].x >= canvas.width || snake[0].y < 0 || snake[0].y >= canvas.height;
         }
 
