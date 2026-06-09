@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>لعبة الدودة الذكية V2</title>
+    <title>لعبة الدودة الذكية - مسار هاملتوني</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -23,7 +23,7 @@
 
         .header-panel {
             display: flex;
-            flex-direction: column; /* تحسين العرض للهواتف */
+            flex-direction: column;
             align-items: center;
             width: 100%;
             max-width: 800px;
@@ -53,7 +53,7 @@
             gap: 10px;
             width: 100%;
             justify-content: center;
-            flex-wrap: wrap; /* السماح بالتفاف الأزرار في الهواتف */
+            flex-wrap: wrap;
         }
 
         .mode-button {
@@ -139,8 +139,8 @@
         </div>
         
         <div class="buttons-container">
-            <button class="mode-button apple-button" onclick="addAppleBtnClick()">تفاحة 🍎</button>
-            <button class="mode-button" id="aiBtn" onclick="toggleAIMode()">الذكاء الاصطناعي 🤖</button>
+            <button class="mode-button apple-button" onclick="addAppleBtnClick()">إضافة تفاحة 🍎</button>
+            <button class="mode-button" id="aiBtn" onclick="toggleAIMode()">تشغيل البوت 🤖</button>
         </div>
     </div>
 
@@ -160,7 +160,7 @@
         const gridSize = 20; 
         let snake = [];
         let score = 0;
-        let dx = gridSize; 
+        let dx = -gridSize; // تبدأ متجهة لليسار
         let dy = 0;        
         let foods = []; 
         let changingDirection = false;
@@ -169,21 +169,27 @@
 
         function resizeCanvas() {
             const container = document.getElementById("canvasContainer");
-            canvas.width = Math.floor(container.clientWidth / gridSize) * gridSize;
-            canvas.height = Math.floor(container.clientHeight / gridSize) * gridSize;
+            
+            // يجب أن يكون عدد الأعمدة زوجياً لكي تعمل الخوارزمية المنظمة بلا أخطاء
+            let cols = Math.floor(container.clientWidth / gridSize);
+            if (cols % 2 !== 0) cols -= 1; 
+            canvas.width = cols * gridSize;
+
+            let rows = Math.floor(container.clientHeight / gridSize);
+            canvas.height = rows * gridSize;
         }
 
         function initGame() {
             resizeCanvas();
-            const startX = Math.floor((canvas.width / 2) / gridSize) * gridSize;
-            const startY = Math.floor((canvas.height / 2) / gridSize) * gridSize;
-
+            
+            // نضع الدودة في مسار العودة (الصف العلوي) لتبدأ دورتها المنظمة بشكل صحيح
             snake = [
-                { x: startX, y: startY },
-                { x: startX - gridSize, y: startY },
-                { x: startX - gridSize * 2, y: startY }
+                { x: gridSize * 2, y: 0 },
+                { x: gridSize * 3, y: 0 },
+                { x: gridSize * 4, y: 0 }
             ];
-            score = 0; dx = gridSize; dy = 0; foods = [];
+            
+            score = 0; dx = -gridSize; dy = 0; foods = [];
             
             document.getElementById('score').innerText = score;
             document.getElementById('gameOverScreen').style.display = 'none';
@@ -199,14 +205,17 @@
             
             if (isAIMode) {
                 btn.innerText = "إيقاف البوت 👤"; btn.classList.add("active");
-                modeText.innerText = "تلقائي 🤖"; modeText.style.color = "#ffaa00";
+                modeText.innerText = "منظم 🤖"; modeText.style.color = "#ffaa00";
             } else {
                 btn.innerText = "تشغيل البوت 🤖"; btn.classList.remove("active");
                 modeText.innerText = "يدوي 👤"; modeText.style.color = "#00ff88";
             }
         }
 
-        function addAppleBtnClick() { addRandomFood(); addRandomFood(); }
+        // إضافة تفاحة واحدة فقط عند الضغط
+        function addAppleBtnClick() { 
+            addRandomFood(); 
+        }
 
         function main() {
             if (hasGameEnded()) {
@@ -215,88 +224,53 @@
                 return;
             }
             changingDirection = false;
-            if (isAIMode) runAI();
+            
+            if (isAIMode) runAIPerfectPattern();
 
+            // السرعة 30 ملي ثانية لتكون سريعة وممتعة للمشاهدة
             gameLoopTimeout = setTimeout(function onTick() {
                 clearCanvas(); drawFoods(); advanceSnake(); drawSnake(); main();
-            }, 70);
+            }, 30);
         }
 
         function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
-        // دالة مساعدة للذكاء الاصطناعي لفحص ما إذا كان المربع آمناً
-        function isSafe(x, y) {
-            if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) return false;
-            for (let i = 0; i < snake.length - 1; i++) { // نستثني الذيل لأنه سيتحرك
-                if (snake[i].x === x && snake[i].y === y) return false;
-            }
-            return true;
-        }
-
-        // دالة تحسب عدد المسارات الحرة المتاحة (الرؤية المستقبلية)
-        function countFreeSpaces(x, y) {
-            let free = 0;
-            if (isSafe(x + gridSize, y)) free++;
-            if (isSafe(x - gridSize, y)) free++;
-            if (isSafe(x, y + gridSize)) free++;
-            if (isSafe(x, y - gridSize)) free++;
-            return free;
-        }
-
-        // خوارزمية الذكاء الاصطناعي المطورة (V2)
-        function runAI() {
+        // خوارزمية المسار المنظم (لن تخسر أبداً لأنها تمسح الشاشة بخطوط متوازية)
+        function runAIPerfectPattern() {
             const head = snake[0];
-            if (foods.length === 0) return;
+            const max_x = canvas.width - gridSize;
+            const max_y = canvas.height - gridSize;
+            const x = head.x;
+            const y = head.y;
 
-            let targetFood = foods[0];
-            let minDistanceToFood = Infinity;
-
-            for (let i = 0; i < foods.length; i++) {
-                const dist = Math.abs(head.x - foods[i].x) + Math.abs(head.y - foods[i].y);
-                if (dist < minDistanceToFood) {
-                    minDistanceToFood = dist; targetFood = foods[i];
-                }
-            }
-
-            const directions = [
-                { x: gridSize, y: 0 }, { x: -gridSize, y: 0 },
-                { x: 0, y: gridSize }, { x: 0, y: -gridSize }
-            ];
-
-            let bestDir = null;
-            let bestScore = -Infinity; // نظام تنقيط لاختيار أفضل حركة
-
-            for (const dir of directions) {
-                if (dir.x === -dx && dir.y === -dy) continue; // لا تعود للخلف
-
-                const nextX = head.x + dir.x;
-                const nextY = head.y + dir.y;
-
-                if (!isSafe(nextX, nextY)) continue;
-
-                const distance = Math.abs(nextX - targetFood.x) + Math.abs(nextY - targetFood.y);
-                const freeSpaces = countFreeSpaces(nextX, nextY); // التفكير للمستقبل
-
-                // التنقيط: نفضل المسافة الأقصر، ولكننا نعطي أولوية قصوى للمساحات المفتوحة لتجنب الحصار
-                let moveScore = -distance; // المسافة الأقل أفضل
-                
-                if (freeSpaces === 0) {
-                    moveScore -= 10000; // مسار مسدود! تجنبه بأي ثمن
-                } else if (freeSpaces === 1) {
-                    moveScore -= 1000;  // مسار خطير (قد يكون نفقاً)
+            // القاعدة 1: الصف العلوي مخصص للعودة لليسار
+            if (y === 0) {
+                if (x > 0) {
+                    dx = -gridSize; dy = 0; // تحرك يساراً
                 } else {
-                    moveScore += freeSpaces * 10; // مكافأة للمسارات المفتوحة
-                }
-
-                if (moveScore > bestScore) {
-                    bestScore = moveScore;
-                    bestDir = dir;
+                    dx = 0; dy = gridSize; // عندما تصل للزاوية (0,0)، انزل لأسفل
                 }
             }
-
-            // إذا وجد مساراً أفضل، قم بتغيير الاتجاه
-            if (bestDir) {
-                dx = bestDir.x; dy = bestDir.y;
+            // القاعدة 2: الأعمدة الزوجية (0، 2، 4...) تتحرك للأسفل
+            else if ((x / gridSize) % 2 === 0) {
+                if (y < max_y) {
+                    dx = 0; dy = gridSize; // تحرك لأسفل
+                } else {
+                    dx = gridSize; dy = 0; // عند الوصول للقاع، خذ خطوة لليمين للعمود الفردي
+                }
+            }
+            // القاعدة 3: الأعمدة الفردية (1، 3، 5...) تتحرك للأعلى
+            else {
+                if (y > gridSize) {
+                    dx = 0; dy = -gridSize; // تحرك للأعلى
+                } else {
+                    // عند الوصول لأسفل صف العودة مباشرة (y = gridSize)
+                    if (x < max_x) {
+                        dx = gridSize; dy = 0; // خذ خطوة لليمين للعمود الزوجي
+                    } else {
+                        dx = 0; dy = -gridSize; // إذا كان هذا آخر عمود في الشاشة، اصعد لصف العودة للبدء من جديد
+                    }
+                }
             }
         }
 
