@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>لعبة الدودة الذكية - مسار هاملتوني</title>
+    <title>لعبة الدودة الذكية V3 - النسخة الهاملتونية</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -47,6 +47,7 @@
         .stat-box { text-align: center; }
         .stat-label { font-size: 12px; color: #00ff88; text-transform: uppercase; }
         .stat-value { font-size: 20px; font-weight: bold; color: #fff; text-shadow: 0 0 8px rgba(0, 255, 136, 0.4); }
+        .high-score-color { color: #ffaa00; text-shadow: 0 0 8px rgba(255, 170, 0, 0.4); }
 
         .buttons-container {
             display: flex;
@@ -133,14 +134,18 @@
                 <div class="stat-value" id="score">0</div>
             </div>
             <div class="stat-box">
+                <div class="stat-label">أعلى نتيجة</div>
+                <div class="stat-value high-score-color" id="highScore">0</div>
+            </div>
+            <div class="stat-box">
                 <div class="stat-label">النمط</div>
                 <div class="stat-value" id="currentMode" style="color: #00ff88; font-size: 16px; margin-top: 5px;">يدوي 👤</div>
             </div>
         </div>
         
         <div class="buttons-container">
-            <button class="mode-button apple-button" onclick="addAppleBtnClick()">إضافة تفاحة 🍎</button>
-            <button class="mode-button" id="aiBtn" onclick="toggleAIMode()">تشغيل البوت 🤖</button>
+            <button class="mode-button apple-button" onclick="addAppleBtnClick()">تفاحة 🍎</button>
+            <button class="mode-button" id="aiBtn" onclick="toggleAIMode()">الذكاء الاصطناعي 🤖</button>
         </div>
     </div>
 
@@ -160,43 +165,80 @@
         const gridSize = 20; 
         let snake = [];
         let score = 0;
-        let dx = -gridSize; // تبدأ متجهة لليسار
-        let dy = 0;        
+        let highScore = localStorage.getItem("snakeHighScore") || 0;
+        let dx = 0; 
+        let dy = gridSize;        
         let foods = []; 
         let changingDirection = false;
         let gameLoopTimeout;
         let isAIMode = false;
+        let gameSpeed = 45; // تم تقليل الزمن لزيادة السرعة
+
+        // متغيرات للتحكم باللمس (الموبايل)
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        document.getElementById('highScore').innerText = highScore;
 
         function resizeCanvas() {
             const container = document.getElementById("canvasContainer");
-            
-            // يجب أن يكون عدد الأعمدة زوجياً لكي تعمل الخوارزمية المنظمة بلا أخطاء
-            let cols = Math.floor(container.clientWidth / gridSize);
-            if (cols % 2 !== 0) cols -= 1; 
-            canvas.width = cols * gridSize;
-
-            let rows = Math.floor(container.clientHeight / gridSize);
-            canvas.height = rows * gridSize;
+            // نجبر العرض على أن يكون مضاعفاً زوجياً للـ gridSize لضمان عمل الدورة الهاملتونية بشكل مثالي
+            canvas.width = Math.floor(container.clientWidth / (gridSize * 2)) * (gridSize * 2);
+            canvas.height = Math.floor(container.clientHeight / gridSize) * gridSize;
         }
 
         function initGame() {
             resizeCanvas();
             
-            // نضع الدودة في مسار العودة (الصف العلوي) لتبدأ دورتها المنظمة بشكل صحيح
+            // نقطة البداية مهيأة لتناسب الدورة الهاملتونية (يبدأ من العمود الأول وينزل لأسفل)
+            const startX = 0;
+            const startY = gridSize * 3;
+
             snake = [
-                { x: gridSize * 2, y: 0 },
-                { x: gridSize * 3, y: 0 },
-                { x: gridSize * 4, y: 0 }
+                { x: startX, y: startY },
+                { x: startX, y: startY - gridSize },
+                { x: startX, y: startY - gridSize * 2 }
             ];
             
-            score = 0; dx = -gridSize; dy = 0; foods = [];
+            score = 0; 
+            dx = 0; // يبدأ بالنزول لأسفل
+            dy = gridSize; 
+            foods = [];
             
             document.getElementById('score').innerText = score;
             document.getElementById('gameOverScreen').style.display = 'none';
-            addRandomFood(); main();
+            addRandomFood(); 
+            main();
         }
 
+        // التحكم بالكيبورد
         document.addEventListener("keydown", changeDirection);
+
+        // التحكم باللمس للهواتف
+        document.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, {passive: true});
+
+        document.addEventListener('touchend', e => {
+            if (isAIMode || changingDirection) return;
+            let touchEndX = e.changedTouches[0].screenX;
+            let touchEndY = e.changedTouches[0].screenY;
+            handleSwipe(touchEndX - touchStartX, touchEndY - touchStartY);
+        }, {passive: true});
+
+        function handleSwipe(deltaX, deltaY) {
+            const goingUp = dy === -gridSize, goingDown = dy === gridSize;
+            const goingRight = dx === gridSize, goingLeft = dx === -gridSize;
+
+            if (Math.abs(deltaX) > Math.abs(deltaY)) { // سحب أفقي
+                if (deltaX > 30 && !goingLeft) { dx = gridSize; dy = 0; changingDirection = true; }
+                else if (deltaX < -30 && !goingRight) { dx = -gridSize; dy = 0; changingDirection = true; }
+            } else { // سحب عمودي
+                if (deltaY > 30 && !goingUp) { dx = 0; dy = gridSize; changingDirection = true; }
+                else if (deltaY < -30 && !goingDown) { dx = 0; dy = -gridSize; changingDirection = true; }
+            }
+        }
 
         function toggleAIMode() {
             isAIMode = !isAIMode;
@@ -205,72 +247,63 @@
             
             if (isAIMode) {
                 btn.innerText = "إيقاف البوت 👤"; btn.classList.add("active");
-                modeText.innerText = "منظم 🤖"; modeText.style.color = "#ffaa00";
+                modeText.innerText = "تلقائي (هاملتوني) 🤖"; modeText.style.color = "#ffaa00";
             } else {
                 btn.innerText = "تشغيل البوت 🤖"; btn.classList.remove("active");
                 modeText.innerText = "يدوي 👤"; modeText.style.color = "#00ff88";
             }
         }
 
-        // إضافة تفاحة واحدة فقط عند الضغط
         function addAppleBtnClick() { 
-            addRandomFood(); 
+            addRandomFood(); // إضافة تفاحة واحدة فقط بناءً على طلبك
         }
 
         function main() {
             if (hasGameEnded()) {
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem("snakeHighScore", highScore);
+                    document.getElementById('highScore').innerText = highScore;
+                }
                 document.getElementById('finalScore').innerText = score;
                 document.getElementById('gameOverScreen').style.display = 'block';
                 return;
             }
-            changingDirection = false;
             
-            if (isAIMode) runAIPerfectPattern();
+            changingDirection = false;
+            if (isAIMode) runAIHamiltonian(); // تشغيل الخوارزمية الجديدة
 
-            // السرعة 30 ملي ثانية لتكون سريعة وممتعة للمشاهدة
             gameLoopTimeout = setTimeout(function onTick() {
                 clearCanvas(); drawFoods(); advanceSnake(); drawSnake(); main();
-            }, 30);
+            }, gameSpeed);
         }
 
         function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
-        // خوارزمية المسار المنظم (لن تخسر أبداً لأنها تمسح الشاشة بخطوط متوازية)
-        function runAIPerfectPattern() {
+        // خوارزمية الدورة الهاملتونية (المسح الذكي)
+        function runAIHamiltonian() {
             const head = snake[0];
-            const max_x = canvas.width - gridSize;
-            const max_y = canvas.height - gridSize;
-            const x = head.x;
-            const y = head.y;
+            let col = Math.round(head.x / gridSize);
+            let row = Math.round(head.y / gridSize);
+            let maxCol = Math.round(canvas.width / gridSize) - 1;
+            let maxRow = Math.round(canvas.height / gridSize) - 1;
 
-            // القاعدة 1: الصف العلوي مخصص للعودة لليسار
-            if (y === 0) {
-                if (x > 0) {
-                    dx = -gridSize; dy = 0; // تحرك يساراً
-                } else {
-                    dx = 0; dy = gridSize; // عندما تصل للزاوية (0,0)، انزل لأسفل
-                }
-            }
-            // القاعدة 2: الأعمدة الزوجية (0، 2، 4...) تتحرك للأسفل
-            else if ((x / gridSize) % 2 === 0) {
-                if (y < max_y) {
-                    dx = 0; dy = gridSize; // تحرك لأسفل
-                } else {
-                    dx = gridSize; dy = 0; // عند الوصول للقاع، خذ خطوة لليمين للعمود الفردي
-                }
-            }
-            // القاعدة 3: الأعمدة الفردية (1، 3، 5...) تتحرك للأعلى
+            // الصف العلوي (y=0) مخصص للعودة من اليمين إلى اليسار (نقطة البداية)
+            if (row === 0) {
+                if (col > 0) { dx = -gridSize; dy = 0; } // اتجه يساراً
+                else { dx = 0; dy = gridSize; } // عند الوصول لأقصى اليسار، انزل لأسفل
+            } 
+            // الأعمدة الزوجية (0, 2, 4...) تنزل لأسفل
+            else if (col % 2 === 0) {
+                if (row < maxRow) { dx = 0; dy = gridSize; } // استمر بالنزول
+                else { dx = gridSize; dy = 0; } // عند القاع، تحرك يميناً للعمود الفردي
+            } 
+            // الأعمدة الفردية (1, 3, 5...) تصعد لأعلى
             else {
-                if (y > gridSize) {
-                    dx = 0; dy = -gridSize; // تحرك للأعلى
-                } else {
-                    // عند الوصول لأسفل صف العودة مباشرة (y = gridSize)
-                    if (x < max_x) {
-                        dx = gridSize; dy = 0; // خذ خطوة لليمين للعمود الزوجي
-                    } else {
-                        dx = 0; dy = -gridSize; // إذا كان هذا آخر عمود في الشاشة، اصعد لصف العودة للبدء من جديد
-                    }
-                }
+                // إذا كنا في العمود الأخير ووصلنا للصف قبل العلوي، نصعد للصف العلوي لنكمل الدورة
+                if (col === maxCol && row === 1) { dx = 0; dy = -gridSize; }
+                else if (row > 1) { dx = 0; dy = -gridSize; } // استمر بالصعود حتى الصف 1
+                else { dx = gridSize; dy = 0; } // عند الصف 1، تحرك يميناً للعمود الزوجي التالي
             }
         }
 
@@ -309,7 +342,7 @@
             const head = { x: snake[0].x + dx, y: snake[0].y + dy };
             snake.unshift(head); 
 
-            let eatenIndex = foods.findIndex(f => snake[0].x === f.x && snake[0].y === f.y);
+            let eatenIndex = foods.findIndex(f => head.x === f.x && head.y === f.y);
             if (eatenIndex !== -1) {
                 score += 10; document.getElementById('score').innerText = score;
                 foods.splice(eatenIndex, 1); addRandomFood();
@@ -329,11 +362,11 @@
         }
 
         function addRandomFood() {
-            const maxX = (canvas.width - gridSize) / gridSize;
-            const maxY = (canvas.height - gridSize) / gridSize;
+            const maxX = Math.floor(canvas.width / gridSize);
+            const maxY = Math.floor(canvas.height / gridSize);
             let nx, ny, valid = false, attempts = 0;
 
-            while (!valid && attempts < 100) {
+            while (!valid && attempts < 200) {
                 nx = Math.floor(Math.random() * maxX) * gridSize;
                 ny = Math.floor(Math.random() * maxY) * gridSize;
                 valid = !snake.some(p => p.x === nx && p.y === ny) && !foods.some(f => f.x === nx && f.y === ny);
@@ -345,7 +378,8 @@
         function changeDirection(event) {
             if (isAIMode) return;
             const key = event.keyCode;
-            const goingUp = dy === -gridSize, goingDown = dy === gridSize, goingRight = dx === gridSize, goingLeft = dx === -gridSize;
+            const goingUp = dy === -gridSize, goingDown = dy === gridSize;
+            const goingRight = dx === gridSize, goingLeft = dx === -gridSize;
             if (changingDirection) return;
 
             if (key === 37 && !goingRight) { dx = -gridSize; dy = 0; changingDirection = true; }
@@ -355,9 +389,11 @@
         }
 
         function hasGameEnded() {
+            // الخسارة فقط إذا اصطدمت الدودة بنفسها (في الوضع اليدوي عادة)
             for (let i = 4; i < snake.length; i++) {
                 if (snake[i].x === snake[0].x && snake[i].y === snake[0].y) return true;
             }
+            // أو إذا خرجت عن الحدود
             return snake[0].x < 0 || snake[0].x >= canvas.width || snake[0].y < 0 || snake[0].y >= canvas.height;
         }
 
